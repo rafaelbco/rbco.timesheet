@@ -5,18 +5,17 @@ Usage:
   timesheet [options] <db_path> <out_path>
 
 Options:
-  -h, --help          Imprime esta mensagem.
+  -h, --help          Print this help text.
 """
-from docopt import docopt
-import os
-import re
-import csv
-from rbco.caseclasses import case
 from datetime import date
 from datetime import datetime
 from datetime import timedelta
-import shutil
+from docopt import docopt
 import calendar
+import csv
+import os
+import re
+import shutil
 
 
 YEAR_DIR_PATTERN = re.compile(r'^\d\d\d\d$')
@@ -40,13 +39,56 @@ DAY_LINE_TEMPLATE = '    '.join([
 ])
 
 
-@case
-class DayRecord(object):
+class Record(object):
+    u"""Interface for records representing a period of time in a timesheet."""
+
+    def worked(self):
+        u"""Return a `timedelta` representing the amount of time worked in the period."""
+        raise NotImplementedError()
+
+    def validate(self):
+        u"""Validate the record.
+
+        Return: a sequence of error messages or an empty sequence if the record is ok
+        """
+        raise NotImplementedError()
+
+    def identifier(self):
+        u"""Return an unique string which identifies the record."""
+        raise NotImplementedError()
+
+
+class CompositeRecord(Record):
+    u"""Base class for records which are a composition of other `Record` instances.
+
+    Subclasses must implement a `records` attribute containing a sequence of `Record`.
+    """
+
+    def worked(self):
+        u"""Implement `Record`."""
+        return sum((r.worked() for r in self.records), timedelta(0))
+
+    def validate(self):
+        u"""Implement `Record`."""
+        record_errors = ((r, r.validate()) for r in self.records)
+        record_errors = ((r, e) for (r, e) in record_errors if e)
+        errors = []
+        for (r, r_errors) in record_errors:
+            for e in r_errors:
+                errors.append('{}: {}'.format(r.identifier(), e))
+
+        return errors
+
+
+class DayRecord(Record):
 
     valid_day_types = ('N', 'WE', 'H', 'V')
 
     def __init__(self, day, day_type, checkin, checkout):
-        pass
+        self.day = day
+        self.day_type = day_type
+        self.checkin = checkin
+        self.checkout = checkout
 
     def worked(self):
         return (
@@ -71,107 +113,158 @@ class DayRecord(object):
 
         return errors
 
+    def identifier(self):
+        return self.day.strftime('%y-%m-%d')
 
-@case
-class MonthRecord(object):
+    def __str__(self):
+        return '{}: {:<5} {:<5} {:<5}'.format(
+            self.identifier(),
+            self.day_type,
+            date_to_time_str(self.checkin),
+            date_to_time_str(self.checkout)
+        )
 
-    def __init__(self, year, month, day_records):
-        pass
 
-    def worked(self):
-        return sum((d.worked() for d in self.day_records), timedelta(0))
+class MonthRecord(CompositeRecord):
+
+    def __init__(self, year, month, records=None):
+        self.year = year
+        self.month = month
+        self.records = records if (records is not None) else []
 
     def validate(self):
-        errors = [(d, d.validate()) for d in self.day_records]
-        errors = [
-            '{}: {}'.format(d.day.day, ' / '.join(e))
-            for (d, e)
-            in errors
-            if e
-        ]
+        errors = CompositeRecord.validate(self)
+
         start_day = 1
-        end_day = calendar.monthrange(self.year, self.month)[1]
+        last_day_of_month = calendar.monthrange(self.year, self.month)[1]
+        today = date.today()
+        end_day = min([today.day, last_day_of_month])
+
+        for r in self.records:
+            if (r.day.year != self.year) or (r.day.month != self.month):
+                errors.append('Record belongs to another month: {}'.format(r.identifier()))
+
         for i in xrange(start_day, end_day + 1):
             if not self.get_day_record(i):
                 errors.append('Missing day: {}.'.format(i))
 
-
-@case
-class YearRecord(object):
-
-    def __init__(self, year, month_records):
-        pass
-
-    def worked(self):
-        return sum((m.worked() for m in self.month_records), timedelta(0))
-
-    def validate(self):
-        errors = []
-        for m in self.month_records:
-            for e in m.validate():
-                errors.append('{}: {}'.format(m.month, e))
-
         return errors
 
+    def get_day_record(self, day_number):
+        for r in self.records:
+            if r.day.day == day_number:
+                return r
 
-class DB(object):
+        return None
 
-    def __init__(self, year_records=None):
-        self.year_records = year_records or []
+    def identifier(self):
+        return '{}-{:02d}'.format(self.year, self.month)
 
-    def worked(self):
-        return sum((y.worked() for y in self.year_records), timedelta(0))
 
-    def validate(self):
-        errors = []
-        for y in self.year_records:
-            for e in y.validate():
-                errors.append('{}: {}'.format(y.year, e))
+class YearRecord(CompositeRecord):
 
-        return errors
+    def __init__(self, year, records=None):
+        self.year = year
+        self.records = records if (records is not None) else []
 
-    def print_db(self):
-        for year_record in self.year_records:
-            print 'Year: {}, worked: {}'.format(year_record.year, year_record.worked())
+    def identifier(self):
+        return str(self.year)
+
+
+class TimeSheet(CompositeRecord):
+
+    def __init__(self, records=None):
+        self.records = records if (records is not None) else []
+
+    def identifier(self):
+        return 'timesheet'
+
+    def print_timesheet(self):
+        for year_record in self.records:
+            print 'Year: {}, worked: {}'.format(
+                year_record.year,
+                timedelta_to_str(year_record.worked())
+            )
             print
 
-            for month_record in year_record.month_records:
-                print 'Month: {}, worked: {}'.format(month_record.month, month_record.worked())
+            for month_record in year_record.records:
+                print 'Month: {}, worked: {}'.format(
+                    month_record.month,
+                    timedelta_to_str(month_record.worked())
+                )
                 print
 
-                for day_record in month_record.day_records:
-                    print day_record, day_record.worked()
+                for day_record in month_record.records:
+                    print day_record, timedelta_to_str(day_record.worked())
 
     def load(self, path):
         year_dirs = sorted(
             i for i in os.listdir(path)
             if YEAR_DIR_PATTERN.match(i) is not None
         )
+        self.records = [
+            self.parse_year(os.path.join(path, year_dir))
+            for year_dir
+            in year_dirs
+        ]
 
-        for year_dir in year_dirs:
-            year = int(year_dir)
-            year_path = os.path.join(path, year_dir)
-            month_files = sorted(
-                i for i in os.listdir(year_path)
-                if MONTH_FILE_PATTERN.match(i) is not None
-            )
+    def parse_year(self, year_path):
+        year = int(os.path.basename(year_path))
+        month_files = sorted(
+            i for i in os.listdir(year_path)
+            if MONTH_FILE_PATTERN.match(i) is not None
+        )
 
-            year_record = YearRecord(year=year, month_records=[])
-            self.year_records.append(year_record)
+        return YearRecord(
+            year=year,
+            records=[
+                self.parse_month(os.path.join(year_path, month_file), year)
+                for month_file in month_files
+            ]
+        )
 
-            for month_file in month_files:
-                month = int(month_file.split('.')[0])
-                month_path = os.path.join(year_path, month_file)
-                days = parse_month_file(month_path, year=year)
-                month_record = MonthRecord(year=year, month=month, day_records=days)
-                year_record.month_records.append(month_record)
+    def parse_month(self, month_path, year):
+        month = int(os.path.basename(month_path).split('.')[0])
+        dicts = parse_csv(month_path)
+        return MonthRecord(
+            year=year,
+            month=month,
+            records=[
+                self._day_dict_from_csv_to_day_record(d=d, year=year, month=month)
+                for d in dicts
+            ]
+        )
+
+    def _day_dict_from_csv_to_day_record(self, d, year, month):
+        day = date(year=year, month=month, day=int(d['day']))
+        return DayRecord(
+            day=day,
+            day_type=d['day_type'],
+            checkin=_parse_time(d['checkin'], day),
+            checkout=_parse_time(d['checkout'], day),
+        )
 
 
-@case
 class Policy(object):
+    u"""Calculate balance on periods."""
+
+    def day_balance(self, day_record):
+        raise NotImplementedError()
+
+    def month_balance(self, month_record):
+        return sum((self.day_balance(d) for d in month_record.records), timedelta(0))
+
+    def year_balance(self, year_record):
+        return sum((self.month_balance(m) for m in year_record.records), timedelta(0))
+
+    def timesheet_balance(self, timesheet):
+        return sum((self.year_balance(y) for y in timesheet.records), timedelta(0))
+
+
+class HourPerDaysPolicy(Policy):
 
     def __init__(self, hours_per_day):
-        pass
+        self.hours_per_day = hours_per_day
 
     def day_balance(self, day_record):
         return (
@@ -180,17 +273,8 @@ class Policy(object):
             else timedelta(0)
         )
 
-    def month_balance(self, month_record):
-        return sum((self.day_balance(d) for d in month_record.day_records), timedelta(0))
 
-    def year_balance(self, year_record):
-        return sum((self.month_balance(m) for m in year_record.month_records), timedelta(0))
-
-    def db_balance(self, db):
-        return sum((self.year_balance(m) for m in db.year_records), timedelta(0))
-
-
-DEFAULT_POLICY = Policy(hours_per_day=7)
+DEFAULT_POLICY = HourPerDaysPolicy(hours_per_day=7)
 
 
 def report(db, policy, path):
@@ -200,9 +284,9 @@ def report(db, policy, path):
 
     with open(os.path.join(path, 'totals.txt'), 'w') as f:
         print >> f, 'Worked: {}'.format(timedelta_to_str(db.worked()))
-        print >> f, 'Balance: {}'.format(timedelta_to_str(policy.db_balance(db)))
+        print >> f, 'Balance: {}'.format(timedelta_to_str(policy.timesheet_balance(db)))
 
-    for year_record in db.year_records:
+    for year_record in db.records:
         year_path = os.path.join(path, str(year_record.year))
         mkdirp(year_path)
 
@@ -210,27 +294,27 @@ def report(db, policy, path):
             print >> f, 'Worked: {}'.format(timedelta_to_str(year_record.worked()))
             print >> f, 'Balance: {}'.format(timedelta_to_str(policy.year_balance(year_record)))
 
-        for month_record in year_record.month_records:
+        for month_record in year_record.records:
             month_path = os.path.join(year_path, '{:02d}.txt'.format(month_record.month))
 
             with open(month_path, 'w') as f:
                 print >> f, DAY_HEADER_TEMPLATE
-                for day_record in month_record.day_records:
+                for day_record in month_record.records:
                     print >> f, day_record_to_report_line(day_record, policy)
 
                 print >> f, 'Worked: {}'.format(timedelta_to_str(month_record.worked()))
                 month_balance = timedelta_to_str(policy.month_balance(month_record))
                 print >> f, 'Balance: {}'.format(month_balance)
 
-    print timedelta_to_str(policy.db_balance(db))
+    print timedelta_to_str(policy.timesheet_balance(db))
 
 
 def day_record_to_report_line(day_record, policy):
     return DAY_LINE_TEMPLATE.format(
         day=day_record.day,
         day_type=day_record.day_type,
-        checkin=day_record.checkin.strftime('%H:%M') if day_record.checkin else '-',
-        checkout=day_record.checkout.strftime('%H:%M') if day_record.checkout else '-',
+        checkin=date_to_time_str(day_record.checkin),
+        checkout=date_to_time_str(day_record.checkout),
         worked=timedelta_to_str(day_record.worked()),
         balance=timedelta_to_str(policy.day_balance(day_record)),
     )
@@ -243,45 +327,35 @@ def timedelta_to_str(t):
     return '{:02d}:{:02d}'.format(int(hours), int(minutes))
 
 
+def date_to_time_str(d):
+    return d.strftime('%H:%M') if d else '-'
+
+
 def main():
     arguments = docopt(__doc__)
 
     db_path = arguments['<db_path>']
     out_path = arguments['<out_path>']
 
-    db = DB()
-    db.load(db_path)
-    db.print_db()
+    timesheet = TimeSheet()
+    timesheet.load(db_path)
+    timesheet.print_timesheet()
     print
 
-    for e in db.validate():
+    for e in timesheet.validate():
         print e
     print
 
-    report(db, DEFAULT_POLICY, out_path)
+    report(timesheet, DEFAULT_POLICY, out_path)
 
 
-def parse_month_file(path, year):
-    month = int(os.path.basename(path).split('.')[0])
-
-    with open(path, 'r') as f:
-        dicts = [_format_dict(i) for i in csv.DictReader(f)]
-
-    day_records = []
-    for d in dicts:
-        day = date(year=year, month=month, day=int(d['day']))
-        day_records.append(DayRecord(
-            day=day,
-            day_type=d['day_type'],
-            checkin=_parse_time(d['checkin'], day),
-            checkout=_parse_time(d['checkout'], day),
-        ))
-
-    return day_records
-
-
-def _format_dict(d):
+def format_csv_dict(d):
     return {k.strip(): v.strip() for (k, v) in d.iteritems()}
+
+
+def parse_csv(path):
+    with open(path, 'r') as f:
+        return [format_csv_dict(i) for i in csv.DictReader(f)]
 
 
 def _parse_time(s, day):
