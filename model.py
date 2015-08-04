@@ -1,13 +1,15 @@
 # coding=utf8
 from datetime import date
+from datetime import datetime
 from datetime import timedelta
+from util import date_to_time_str
+from util import pairwise
+from util import parse_csv
+from util import parse_time
+from util import timedelta_to_str
 import calendar
 import os
 import re
-from util import date_to_time_str
-from util import timedelta_to_str
-from util import parse_time
-from util import parse_csv
 
 
 YEAR_DIR_PATTERN = re.compile(r'^\d\d\d\d$')
@@ -122,6 +124,11 @@ class MonthRecord(CompositeRecord):
         for i in xrange(start_day, end_day + 1):
             if not self.get_day_record(i):
                 errors.append('Missing day: {}.'.format(i))
+
+        sorted_records = sorted(self.records, key=lambda r: r.checkin or datetime.max)
+        for (a, b) in pairwise(sorted_records):
+            if (a.checkin and a.checkout and b.checkin) and (a.checkin <= b.checkin <= a.checkout):
+                errors.append('Overlapping records: ({}) and ({})'.format(a, b))
 
         return errors
 

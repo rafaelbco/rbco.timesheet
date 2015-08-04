@@ -2,6 +2,8 @@
 from datetime import datetime
 import csv
 import os
+from itertools import tee
+from itertools import izip
 
 
 def timedelta_to_str(t):
@@ -16,7 +18,15 @@ def date_to_time_str(d):
 
 
 def format_csv_dict(d):
-    return {k.strip(): v.strip() for (k, v) in d.iteritems()}
+    items = (
+        (k.strip(), v.strip())
+        for (k, v) in d.iteritems()
+    )
+    items = (
+        (k, (v if (v != '-') else None))
+        for (k, v) in items
+    )
+    return dict(items)
 
 
 def parse_csv(path):
@@ -35,3 +45,10 @@ def parse_time(s, day):
 def mkdirp(path):
     if not os.path.exists(path):
         os.makedirs(path)
+
+
+def pairwise(iterable):
+    "s -> (s0,s1), (s1,s2), (s2, s3), ..."
+    a, b = tee(iterable)
+    next(b, None)
+    return izip(a, b)
