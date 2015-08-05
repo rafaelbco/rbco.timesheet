@@ -8,7 +8,6 @@ Options:
   -h, --help          Print this help text.
 """
 from docopt import docopt
-from model import TimeSheet
 from report import report
 from policy import DEFAULT_POLICY
 from db import parse_db
@@ -21,7 +20,7 @@ def main():
     out_path = arguments['<out_path>']
 
     timesheet = parse_db(db_path)
-    timesheet.print_timesheet()
+    #timesheet.print_timesheet()
     print
 
     for e in timesheet.validate():

@@ -24,11 +24,13 @@ class HourPerDaysPolicy(Policy):
         self.hours_per_day = hours_per_day
 
     def day_balance(self, day_record):
-        return (
-            (day_record.worked() - timedelta(hours=self.hours_per_day))
-            if (day_record.day_type == 'N')
-            else timedelta(0)
-        )
+        if day_record.day_type == 'NOR':
+            return day_record.worked() - timedelta(hours=self.hours_per_day)
+
+        if day_record.day_type == 'ABS':
+            return -timedelta(hours=self.hours_per_day)
+
+        return timedelta(0)
 
 
 DEFAULT_POLICY = HourPerDaysPolicy(hours_per_day=7)

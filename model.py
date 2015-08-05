@@ -4,12 +4,8 @@ from datetime import datetime
 from datetime import timedelta
 from util import date_to_time_str
 from util import pairwise
-from util import parse_csv
-from util import parse_time
 from util import timedelta_to_str
 import calendar
-import os
-import re
 
 
 class Record(object):
@@ -55,7 +51,7 @@ class CompositeRecord(Record):
 
 class DayRecord(Record):
 
-    valid_day_types = ('N', 'WE', 'H', 'V')
+    valid_day_types = ('NOR', 'WE', 'HOL', 'VAC', 'ABS', 'Z')
 
     def __init__(self, day, day_type, checkin, checkout):
         self.day = day
@@ -83,6 +79,12 @@ class DayRecord(Record):
 
         if self.checkin and self.checkout and (self.checkout < self.checkin):
             errors.append('Checkout before checkin.')
+
+        if (self.day_type == 'NOR') and not (self.checkin and self.checkout):
+            errors.append('Day type is NOR but no checkin or checkout.')
+
+        if (self.day_type in ('VAC', 'Z', 'WE', 'HOL', 'ABS')) and (self.checkin or self.checkout):
+            errors.append('Day type cannot have checkin or checkout.')
 
         return errors
 

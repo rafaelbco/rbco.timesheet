@@ -8,17 +8,11 @@ Options:
   -h, --help          Print this help text.
 """
 from docopt import docopt
-from model import TimeSheet
-from report import report
-from policy import DEFAULT_POLICY
 from util import parse_csv
 from model import DayRecord
-from datetime import date
 from datetime import datetime
 from util import parse_time
-from util import mkdirp
 from db import write_day_record
-
 
 
 def main():
@@ -54,4 +48,3 @@ def dict_to_day_record(d):
 
 if __name__ == '__main__':
     main()
-
