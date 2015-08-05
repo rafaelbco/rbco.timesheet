@@ -10,7 +10,7 @@ def timedelta_to_str(t):
     seconds = abs(t.total_seconds())
     hours, remainder = divmod(seconds, 3600)
     minutes, _ = divmod(remainder, 60)
-    return '{:02d}:{:02d}'.format(int(hours), int(minutes))
+    return '{}{:02d}:{:02d}'.format('' if t.total_seconds() >= 0 else '-',  int(hours), int(minutes))
 
 
 def date_to_time_str(d):

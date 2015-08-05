@@ -11,6 +11,7 @@ from docopt import docopt
 from model import TimeSheet
 from report import report
 from policy import DEFAULT_POLICY
+from db import parse_db
 
 
 def main():
@@ -19,8 +20,7 @@ def main():
     db_path = arguments['<db_path>']
     out_path = arguments['<out_path>']
 
-    timesheet = TimeSheet()
-    timesheet.load(db_path)
+    timesheet = parse_db(db_path)
     timesheet.print_timesheet()
     print
 

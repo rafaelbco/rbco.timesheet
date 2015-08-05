@@ -12,10 +12,6 @@ import os
 import re
 
 
-YEAR_DIR_PATTERN = re.compile(r'^\d\d\d\d$')
-MONTH_FILE_PATTERN = re.compile(r'^\d\d\.csv$')
-
-
 class Record(object):
     u"""Interface for records representing a period of time in a timesheet."""
 
@@ -114,8 +110,10 @@ class MonthRecord(CompositeRecord):
 
         start_day = 1
         last_day_of_month = calendar.monthrange(self.year, self.month)[1]
+        end_day = last_day_of_month
         today = date.today()
-        end_day = min([today.day, last_day_of_month])
+        if (self.year == today.year) and (self.month == today.month):
+            end_day = today.day
 
         for r in self.records:
             if (r.day.year != self.year) or (r.day.month != self.month):
@@ -178,50 +176,3 @@ class TimeSheet(CompositeRecord):
 
                 for day_record in month_record.records:
                     print day_record, timedelta_to_str(day_record.worked())
-
-    def load(self, path):
-        year_dirs = sorted(
-            i for i in os.listdir(path)
-            if YEAR_DIR_PATTERN.match(i) is not None
-        )
-        self.records = [
-            self.parse_year(os.path.join(path, year_dir))
-            for year_dir
-            in year_dirs
-        ]
-
-    def parse_year(self, year_path):
-        year = int(os.path.basename(year_path))
-        month_files = sorted(
-            i for i in os.listdir(year_path)
-            if MONTH_FILE_PATTERN.match(i) is not None
-        )
-
-        return YearRecord(
-            year=year,
-            records=[
-                self.parse_month(os.path.join(year_path, month_file), year)
-                for month_file in month_files
-            ]
-        )
-
-    def parse_month(self, month_path, year):
-        month = int(os.path.basename(month_path).split('.')[0])
-        dicts = parse_csv(month_path)
-        return MonthRecord(
-            year=year,
-            month=month,
-            records=[
-                self._day_dict_from_csv_to_day_record(d=d, year=year, month=month)
-                for d in dicts
-            ]
-        )
-
-    def _day_dict_from_csv_to_day_record(self, d, year, month):
-        day = date(year=year, month=month, day=int(d['day']))
-        return DayRecord(
-            day=day,
-            day_type=d['day_type'],
-            checkin=parse_time(d['checkin'], day),
-            checkout=parse_time(d['checkout'], day),
-        )
