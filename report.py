@@ -19,7 +19,7 @@ DAY_HEADER_TEMPLATE = '    '.join([
     '{:<5}'.format('in'),
     '{:<5}'.format('out'),
     '{:<10}'.format('worked'),
-    '{:<10}'.format('balance'),
+    '{:>8}'.format('balance'),
 
 ])
 DAY_LINE_TEMPLATE = '    '.join([
@@ -28,7 +28,7 @@ DAY_LINE_TEMPLATE = '    '.join([
     '{checkin:<5}',
     '{checkout:<5}',
     '{worked:<10}',
-    '{balance:<10}',
+    '{balance:>8}',
 ])
 
 
