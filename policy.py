@@ -9,13 +9,16 @@ class Policy(object):
         raise NotImplementedError()
 
     def month_balance(self, month_record):
-        return sum((self.day_balance(d) for d in month_record.records), timedelta(0))
+        return self.composite_balance(month_record, self.day_balance)
 
     def year_balance(self, year_record):
-        return sum((self.month_balance(m) for m in year_record.records), timedelta(0))
+        return self.composite_balance(year_record, self.month_balance)
 
     def timesheet_balance(self, timesheet):
-        return sum((self.year_balance(y) for y in timesheet.records), timedelta(0))
+        return self.composite_balance(timesheet, self.year_balance)
+
+    def composite_balance(self, composite_record, balance_func):
+        return sum((balance_func(r) for r in composite_record.records), timedelta(0))
 
 
 class HourPerDaysPolicy(Policy):
