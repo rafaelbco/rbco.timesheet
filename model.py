@@ -81,7 +81,7 @@ class DayRecord(Record):
             errors.append('Checkout before checkin.')
 
         if (self.day_type == 'NOR') and not (self.checkin and self.checkout):
-            errors.append('Day type is NOR but no checkin or checkout.')
+            errors.append('Day type is "NOR" but no checkin or checkout.')
 
         if (self.day_type in ('VAC', 'Z', 'WE', 'HOL', 'ABS')) and (self.checkin or self.checkout):
             errors.append('Day type cannot have checkin or checkout.')
@@ -115,7 +115,7 @@ class MonthRecord(CompositeRecord):
         end_day = last_day_of_month
         today = date.today()
         if (self.year == today.year) and (self.month == today.month):
-            end_day = today.day
+            end_day = today.day if (today.day == 1) else (today.day - 1)
 
         for r in self.records:
             if (r.day.year != self.year) or (r.day.month != self.month):
@@ -151,6 +151,15 @@ class YearRecord(CompositeRecord):
 
     def identifier(self):
         return str(self.year)
+
+    def validate(self):
+        errors = CompositeRecord.validate(self)
+
+        for r in self.records:
+            if r.year != self.year:
+                errors.append('Record belongs to another year: {}'.format(r.identifier()))
+
+        return errors
 
 
 class TimeSheet(CompositeRecord):

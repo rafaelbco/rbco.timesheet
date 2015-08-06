@@ -61,7 +61,7 @@ def report(db, policy, path):
                 month_balance = timedelta_to_str(policy.month_balance(month_record))
                 print >> f, 'Balance: {}'.format(month_balance)
 
-    print timedelta_to_str(policy.timesheet_balance(db))
+    print 'Balance: {}'.format(timedelta_to_str(policy.timesheet_balance(db)))
 
 
 def day_record_to_report_line(day_record, policy):
