@@ -83,7 +83,7 @@ class DayRecord(Record):
         if (self.day_type == 'NOR') and not (self.checkin and self.checkout):
             errors.append('Day type is "NOR" but no checkin or checkout.')
 
-        if (self.day_type in ('VAC', 'Z', 'WE', 'HOL', 'ABS')) and (self.checkin or self.checkout):
+        if (self.day_type in ('VAC', 'Z', 'ABS')) and (self.checkin or self.checkout):
             errors.append('Day type cannot have checkin or checkout.')
 
         return errors

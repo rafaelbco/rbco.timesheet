@@ -40,7 +40,7 @@ def dict_to_day_record(d):
     day = datetime.strptime(d['Data'], '%Y/%m/%d').date()
     return DayRecord(
         day=day,
-        day_type='N',
+        day_type='NOR',
         checkin=parse_time(d['Check-In'], day),
         checkout=parse_time(d['Check-Out'], day),
     )

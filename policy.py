@@ -33,6 +33,9 @@ class HourPerDaysPolicy(Policy):
         if day_record.day_type == 'ABS':
             return -timedelta(hours=self.hours_per_day)
 
+        if day_record.day_type == 'WE':
+            return day_record.worked()
+
         return timedelta(0)
 
 
