@@ -15,7 +15,10 @@ class Policy(object):
         return self.composite_balance(year_record, self.month_balance)
 
     def timesheet_balance(self, timesheet):
-        return self.composite_balance(timesheet, self.year_balance)
+        return (
+            self.composite_balance(timesheet, self.year_balance) +
+            sum((a.delta for a in timesheet.adjustments), timedelta(0))
+        )
 
     def composite_balance(self, composite_record, balance_func):
         return sum((balance_func(r) for r in composite_record.records), timedelta(0))

@@ -1,12 +1,15 @@
 # coding=utf8
 from datetime import date
+from model import AdjustmentRecord
 from model import DayRecord
 from model import MonthRecord
 from model import TimeSheet
 from model import YearRecord
+from util import mkdirp
 from util import parse_csv
 from util import parse_time
-from util import mkdirp
+from util import str_to_date
+from util import str_to_timedelta
 import os
 import re
 
@@ -20,11 +23,14 @@ def parse_db(path):
         i for i in os.listdir(path)
         if YEAR_DIR_PATTERN.match(i) is not None
     )
-    return TimeSheet(records=[
-        parse_year(os.path.join(path, year_dir))
-        for year_dir
-        in year_dirs
-    ])
+    return TimeSheet(
+        records=[
+            parse_year(os.path.join(path, year_dir))
+            for year_dir
+            in year_dirs
+        ],
+        adjustments=parse_adjustments(os.path.join(path, 'adjustments.csv')),
+    )
 
 
 def parse_year(year_path):
@@ -54,6 +60,17 @@ def parse_month(month_path, year):
             for d in dicts
         ]
     )
+
+
+def parse_adjustments(adjustments_path):
+    dicts = parse_csv(adjustments_path)
+    return [
+        AdjustmentRecord(
+            day=str_to_date(d['day']),
+            delta=str_to_timedelta(d['delta']),
+        )
+        for d in dicts
+    ]
 
 
 def write_day_record(db_path, day_record):

@@ -1,5 +1,6 @@
 # coding=utf8
 from datetime import datetime
+from datetime import timedelta
 import csv
 import os
 from itertools import tee
@@ -40,6 +41,15 @@ def parse_time(s, day):
 
     (hour, minute) = s.split(':')
     return datetime(year=day.year, month=day.month, day=day.day, hour=int(hour), minute=int(minute))
+
+
+def str_to_date(s):
+    return datetime.strptime(s, '%Y-%m-%d').date()
+
+
+def str_to_timedelta(s):
+    (hours, minutes) = s.split(':')
+    return timedelta(hours=int(hours), minutes=int(minutes))
 
 
 def mkdirp(path):

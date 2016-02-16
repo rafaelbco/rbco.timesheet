@@ -51,7 +51,15 @@ class CompositeRecord(Record):
 
 class DayRecord(Record):
 
-    valid_day_types = ('NOR', 'WE', 'HOL', 'VAC', 'ABS', 'Z')
+    valid_day_types = (
+        'NOR',  # Normal.
+        'WE',  # Weekend.
+        'HOL',  # Holiday,
+        'VAC',  # Vacation.
+        'ABS',  # Absence.
+        'COM',  # Day off due to compensation.
+        'Z',  # Other.
+    )
 
     def __init__(self, day, day_type, checkin, checkout):
         self.day = day
@@ -164,8 +172,9 @@ class YearRecord(CompositeRecord):
 
 class TimeSheet(CompositeRecord):
 
-    def __init__(self, records=None):
+    def __init__(self, records=None, adjustments=None):
         self.records = records if (records is not None) else []
+        self.adjustments = adjustments if (adjustments is not None) else []
 
     def identifier(self):
         return 'timesheet'
@@ -187,3 +196,23 @@ class TimeSheet(CompositeRecord):
 
                 for day_record in month_record.records:
                     print day_record, timedelta_to_str(day_record.worked())
+
+
+class AdjustmentRecord(Record):
+    u"""An amount of time to be added to (or removed from) a balance."""
+
+    def __init__(self, day, delta):
+        self.day = day
+        self.delta = delta
+
+    def worked(self):
+        return self.delta
+
+    def validate(self):
+        return ()
+
+    def identifier(self):
+        return 'Adjustment of {} [{}]'.format(
+            timedelta_to_str(self.delta),
+            self.day.strftime('%Y-%m-%d')
+        )
