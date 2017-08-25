@@ -11,7 +11,11 @@ def timedelta_to_str(t):
     seconds = abs(t.total_seconds())
     hours, remainder = divmod(seconds, 3600)
     minutes, _ = divmod(remainder, 60)
-    return '{}{:02d}:{:02d}'.format('' if t.total_seconds() >= 0 else '-',  int(hours), int(minutes))
+    return '{}{:02d}:{:02d}'.format(
+        '' if (t.total_seconds() >= 0) else '-',
+        int(hours),
+        int(minutes)
+    )
 
 
 def date_to_time_str(d):
@@ -19,15 +23,18 @@ def date_to_time_str(d):
 
 
 def format_csv_dict(d):
-    items = (
-        (k.strip(), v.strip())
-        for (k, v) in d.iteritems()
-    )
-    items = (
-        (k, (v if (v != '-') else None))
-        for (k, v) in items
-    )
-    return dict(items)
+    try:
+        items = (
+            (k.strip(), v.strip())
+            for (k, v) in d.iteritems()
+        )
+        items = (
+            (k, (v if (v != '-') else None))
+            for (k, v) in items
+        )
+        return dict(items)
+    except Exception as e:
+        raise RuntimeError('Exception formatting dict: {}. Error: {}'.format(d, e))
 
 
 def parse_csv(path):
