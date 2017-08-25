@@ -40,10 +40,10 @@ def report(db, policy, path):
     with open(os.path.join(path, 'totals.txt'), 'w') as f:
         print >> f, 'Worked: {}'.format(timedelta_to_str(db.worked()))
         print >> f, 'Balance: {}'.format(timedelta_to_str(policy.timesheet_balance(db)))
-        if db.adjustments:
-            print >> f, 'Adjustments:'
-            for a in db.adjustments:
-                print >> f, '    ' + a.identifier()
+        # if db.adjustments:
+        #     print >> f, 'Adjustments:'
+        #     for a in db.adjustments:
+        #         print >> f, '    ' + a.identifier()
 
     for year_record in db.records:
         year_path = os.path.join(path, str(year_record.year))
@@ -77,4 +77,3 @@ def day_record_to_report_line(day_record, policy):
         worked=timedelta_to_str(day_record.worked()),
         balance=timedelta_to_str(policy.day_balance(day_record)),
     )
-
