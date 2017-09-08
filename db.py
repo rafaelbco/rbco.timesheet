@@ -109,3 +109,4 @@ def _day_dict_from_csv_to_day_record(d, year, month):
         checkin=parse_time(d['checkin'], day),
         checkout=parse_time(d['checkout'], day),
     )
+
