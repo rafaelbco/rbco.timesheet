@@ -13,7 +13,8 @@ from util import mkdirp
 from util import timedelta_to_str
 from util import date_to_time_str
 
-DAY_HEADER_TEMPLATE = '    '.join([
+SEPARATOR = 4 * ' '
+DAY_HEADER_TEMPLATE = SEPARATOR.join([
     '{:<3}'.format('day'),
     '{:<5}'.format('type'),
     '{:<5}'.format('in'),
@@ -22,7 +23,7 @@ DAY_HEADER_TEMPLATE = '    '.join([
     '{:>8}'.format('balance'),
 
 ])
-DAY_LINE_TEMPLATE = '    '.join([
+DAY_LINE_TEMPLATE = SEPARATOR.join([
     '{day:%d} ',
     '{day_type:<5}',
     '{checkin:<5}',
