@@ -15,7 +15,7 @@ TRANSLATIONS = {
         u'HOL': u'FERIADO',
         u'VAC': u'FERIAS',
         u'ABS': u'FALTA',
-        u'COM': u'COMPENSACAO',
+        u'COM': u'COMPENS.',
         u'Z': u'OUTRO',
     },
     u'en-us': {},
